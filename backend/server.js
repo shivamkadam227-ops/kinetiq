@@ -111,7 +111,7 @@ app.post('/api/simulate', ClerkExpressRequireAuth(), async (req, res) => {
     }
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3.6-flash',
       contents: 'Create an interactive simulation for: ' + query,
       config: {
         systemInstruction: SIMULATION_PROMPT,
@@ -144,7 +144,7 @@ app.post('/api/simulation-explain', ClerkExpressRequireAuth(), async (req, res) 
     }
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3.6-flash',
       contents: 'The student generated a simulation about: "' + query + '". Provide a voice-narration explanation.',
       config: {
         systemInstruction: EXPLANATION_PROMPT,
@@ -174,7 +174,7 @@ app.post('/api/simulation-chat', ClerkExpressRequireAuth(), async (req, res) => 
     const prompt = 'The student is viewing a simulation about "' + (simulationTopic || query || 'a concept') + '". They ask: "' + message + '"';
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3.6-flash',
       contents: prompt,
       config: {
         systemInstruction: SIM_CHAT_PROMPT,
@@ -199,7 +199,7 @@ app.post('/api/tutor', ClerkExpressRequireAuth(), async (req, res) => {
     }
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3.6-flash',
       contents: message,
       config: {
         systemInstruction: 'You are the KinetiQ AI Tutor, a friendly and expert educational assistant. Explain concepts clearly using simple language, analogies, and examples. Format your responses in clean paragraphs. Be concise but thorough. If the student asks about a scientific or technical concept, explain the underlying principles. Do not use markdown formatting.',
@@ -228,7 +228,7 @@ app.post('/api/generate-test', ClerkExpressRequireAuth(), async (req, res) => {
     const prompt = 'Generate exactly ' + countNum + ' multiple-choice questions about the subject "' + subjectStr + '"' + topicStr + ' at ' + diffStr + ' difficulty level.\n\nIMPORTANT: All questions MUST be about "' + subjectStr + '"' + (topic ? ' and specifically about "' + topic + '"' : '') + '. Do NOT generate questions about any other subject.\n\nReturn ONLY a JSON array with objects containing: question (string), options (array of exactly 4 strings), correctAnswer (index 0-3), explanation (string). No markdown, no extra text, no wrapping.';
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3.6-flash',
       contents: prompt,
       config: {
         systemInstruction: 'You are a test question generator for an educational platform called KinetiQ. Generate high-quality, accurate multiple-choice questions. The questions MUST match the exact subject and topic requested. Return ONLY a valid JSON array. No markdown fences. No extra text before or after the JSON.',
