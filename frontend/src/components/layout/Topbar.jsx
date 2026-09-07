@@ -1,8 +1,34 @@
 "use client";
+import { useState, useEffect } from "react";
 import { UserButton } from "@clerk/nextjs";
 import { Search, Bell, Flame, Menu } from "lucide-react";
+import NotificationPanel from "./NotificationPanel";
+import { getStreak, getUnreadCount } from "@/lib/dataStore";
 
 export default function Topbar({ onMenuClick }) {
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [streak, setStreak] = useState(0);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    setStreak(getStreak().count);
+    setUnreadCount(getUnreadCount());
+
+    // Poll unread count every 10 seconds
+    const interval = setInterval(() => {
+      setUnreadCount(getUnreadCount());
+    }, 10000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleNotifToggle = () => {
+    setNotifOpen(!notifOpen);
+    if (!notifOpen) {
+      // Refresh unread count when closing
+      setTimeout(() => setUnreadCount(getUnreadCount()), 500);
+    }
+  };
+
   return (
     <header className="sticky top-0 z-30 h-16 bg-[#06060e]/80 backdrop-blur-xl border-b border-white/[0.06] flex items-center justify-between px-4 sm:px-6">
       {/* Left: hamburger + search */}
@@ -23,14 +49,26 @@ export default function Topbar({ onMenuClick }) {
 
       {/* Right: streak, notifications, user */}
       <div className="flex items-center gap-2 sm:gap-3 ml-4">
-        <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-orange-500/10 border border-orange-500/20 rounded-xl">
-          <Flame size={16} className="text-orange-400" />
-          <span className="text-xs font-semibold text-orange-300">7 Day Streak</span>
+        {streak > 0 && (
+          <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-orange-500/10 border border-orange-500/20 rounded-xl">
+            <Flame size={16} className="text-orange-400" />
+            <span className="text-xs font-semibold text-orange-300">{streak} Day{streak !== 1 ? "s" : ""} Streak</span>
+          </div>
+        )}
+        <div className="relative">
+          <button
+            onClick={handleNotifToggle}
+            className="relative p-2.5 text-slate-400 hover:text-white rounded-xl hover:bg-white/5 transition-colors"
+          >
+            <Bell size={18} />
+            {unreadCount > 0 && (
+              <span className="absolute top-1.5 right-1.5 min-w-[16px] h-4 flex items-center justify-center px-1 bg-purple-500 rounded-full text-[10px] text-white font-bold">
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </span>
+            )}
+          </button>
+          <NotificationPanel isOpen={notifOpen} onClose={() => { setNotifOpen(false); setUnreadCount(getUnreadCount()); }} />
         </div>
-        <button className="relative p-2.5 text-slate-400 hover:text-white rounded-xl hover:bg-white/5 transition-colors">
-          <Bell size={18} />
-          <span className="absolute top-2 right-2 w-2 h-2 bg-purple-500 rounded-full" />
-        </button>
         <UserButton
           afterSignOutUrl="/"
           appearance={{

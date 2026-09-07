@@ -1,33 +1,68 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
+import { useAuth } from "@clerk/nextjs";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import TestSetup from "@/components/test/TestSetup";
 import QuestionCard from "@/components/test/QuestionCard";
 import TestProgressBar from "@/components/test/TestProgress";
 import TestResult from "@/components/test/TestResult";
+import TestReview from "@/components/test/TestReview";
 import Card from "@/components/ui/Card";
-import { sampleTestQuestions } from "@/lib/mockData";
+import { saveTestResult } from "@/lib/dataStore";
 
 export default function TestPage() {
   const searchParams = useSearchParams();
+  const { getToken } = useAuth();
   const [phase, setPhase] = useState("setup");
   const [questions, setQuestions] = useState([]);
   const [currentQ, setCurrentQ] = useState(0);
   const [answers, setAnswers] = useState({});
   const [initialTopic, setInitialTopic] = useState("");
+  const [testConfig, setTestConfig] = useState({});
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
   useEffect(() => {
     const topic = searchParams.get("topic");
     if (topic) setInitialTopic(topic);
   }, [searchParams]);
 
-  const handleStart = (config) => {
-    const qs = sampleTestQuestions.slice(0, config.count);
-    setQuestions(qs);
-    setAnswers({});
-    setCurrentQ(0);
-    setPhase("test");
+  const handleStart = async (config) => {
+    setTestConfig(config);
+    setLoading(true);
+    setError("");
+    try {
+      const token = await getToken();
+      const res = await fetch(API_URL + "/api/generate-test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+        body: JSON.stringify({
+          subject: config.subject,
+          topic: config.topic,
+          difficulty: config.difficulty,
+          count: config.count,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to generate test");
+      }
+      const data = await res.json();
+      if (!data.questions || data.questions.length === 0) {
+        throw new Error("No questions generated. Please try again.");
+      }
+      setQuestions(data.questions);
+      setAnswers({});
+      setCurrentQ(0);
+      setPhase("test");
+    } catch (err) {
+      setError(err.message || "Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSelect = (answerIdx) => {
@@ -35,10 +70,23 @@ export default function TestPage() {
   };
 
   const handleNext = () => {
-    if (currentQ < questions.length - 1) setCurrentQ((p) => p + 1);
-    else {
+    if (currentQ < questions.length - 1) {
+      setCurrentQ((p) => p + 1);
+    } else {
+      // Test finished — save results
       let score = 0;
-      questions.forEach((q, i) => { if (answers[i] === q.correctAnswer) score++; });
+      questions.forEach((q, i) => {
+        if (answers[i] === q.correctAnswer) score++;
+      });
+      saveTestResult({
+        subject: testConfig.subject,
+        topic: testConfig.topic,
+        difficulty: testConfig.difficulty,
+        score,
+        total: questions.length,
+        questions,
+        answers,
+      });
       setPhase("result");
     }
   };
@@ -48,7 +96,12 @@ export default function TestPage() {
   if (phase === "setup") {
     return (
       <div className="p-4 sm:p-6">
-        <TestSetup onStart={handleStart} initialTopic={initialTopic} />
+        <TestSetup onStart={handleStart} initialTopic={initialTopic} loading={loading} />
+        {error && (
+          <div className="max-w-2xl mx-auto mt-4 px-5 py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+            {error}
+          </div>
+        )}
       </div>
     );
   }
@@ -56,7 +109,27 @@ export default function TestPage() {
   if (phase === "result") {
     return (
       <div className="p-4 sm:p-6">
-        <TestResult score={score} total={questions.length} questions={questions} answers={answers} />
+        <TestResult
+          score={score}
+          total={questions.length}
+          questions={questions}
+          answers={answers}
+          onReview={() => setPhase("review")}
+          testConfig={testConfig}
+        />
+      </div>
+    );
+  }
+
+  if (phase === "review") {
+    return (
+      <div className="p-4 sm:p-6">
+        <TestReview
+          questions={questions}
+          answers={answers}
+          testConfig={testConfig}
+          onBack={() => setPhase("result")}
+        />
       </div>
     );
   }

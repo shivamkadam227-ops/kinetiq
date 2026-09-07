@@ -1,9 +1,9 @@
 "use client";
 import { useRouter } from "next/navigation";
-import { Trophy, Eye, RotateCcw, Target, TrendingUp, TrendingDown } from "lucide-react";
+import { Trophy, Eye, RotateCcw, Target, TrendingUp, TrendingDown, BookOpen } from "lucide-react";
 import Card from "@/components/ui/Card";
 
-export default function TestResult({ score, total, questions, answers }) {
+export default function TestResult({ score, total, questions, answers, onReview, testConfig }) {
   const router = useRouter();
   const pct = Math.round((score / total) * 100);
   const strong = [];
@@ -20,6 +20,9 @@ export default function TestResult({ score, total, questions, answers }) {
           <Trophy size={36} className="text-white" />
         </div>
         <h1 className="text-3xl font-bold text-white mb-2">Test Complete!</h1>
+        {testConfig && (
+          <p className="text-sm text-slate-400">{testConfig.subject} — {testConfig.topic}</p>
+        )}
         <div className="flex items-center justify-center gap-6 mt-4">
           <div>
             <div className="text-4xl font-bold text-white">{score}<span className="text-xl text-slate-400">/{total}</span></div>
@@ -48,8 +51,14 @@ export default function TestResult({ score, total, questions, answers }) {
 
       <div className="flex flex-col sm:flex-row gap-3">
         {weak.length > 0 && (
-          <button onClick={() => router.push("/simulate?concept=" + encodeURIComponent("Review: " + weak[0].question.substring(0, 50)))}
+          <button onClick={onReview}
             className="flex-1 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl text-white text-sm font-medium flex items-center justify-center gap-2 hover:shadow-lg hover:shadow-purple-500/25 transition-all">
+            <BookOpen size={16} /> Review Wrong Answers
+          </button>
+        )}
+        {weak.length > 0 && (
+          <button onClick={() => router.push("/simulate?concept=" + encodeURIComponent(weak[0].question.substring(0, 50)))}
+            className="flex-1 py-3 bg-white/5 border border-white/10 rounded-xl text-white text-sm font-medium flex items-center justify-center gap-2 hover:bg-white/10 transition-all">
             <Eye size={16} /> Visualize Weak Topics
           </button>
         )}
